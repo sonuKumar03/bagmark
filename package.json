@@ -1,6 +1,7 @@
 {
   "name": "bag-bookmark",
-  "version": "1.0.0",
+  "version": "1.0.1",
+
   "description": "Advanced Firefox bookmark extension with date tracking, custom folders, and context menu quick-save",
   "type": "module",
   "scripts": {

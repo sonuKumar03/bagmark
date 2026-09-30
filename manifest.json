@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "BagMark - Advanced Bookmarks",
-  "version": "1.0.0",
+  "version": "1.0.1",
+
   "description": "Right-click to save bookmarks to custom or date-based folders with rich metadata.",
   "permissions": [
     "bookmarks",
