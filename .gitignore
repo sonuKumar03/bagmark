@@ -3,3 +3,5 @@ dist/
 *.log
 .DS_Store
 web-ext-artifacts/
+.env
+.env.local

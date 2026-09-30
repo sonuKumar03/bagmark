@@ -9,7 +9,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package": "npm run build && npx web-ext build --source-dir dist --artifacts-dir web-ext-artifacts --overwrite-dest"
+    "package": "npm run build && npx web-ext build --source-dir dist --artifacts-dir web-ext-artifacts --overwrite-dest",
+    "sign": "npm run build && npx web-ext sign --source-dir dist --artifacts-dir web-ext-artifacts"
   },
   "devDependencies": {
     "@types/firefox-webext-browser": "^143.0.1",
