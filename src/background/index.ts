@@ -165,3 +165,7 @@ browser.storage.onChanged.addListener((changes, area) => {
 browser.menus.onClicked.addListener((info, tab) => {
   handleSaveAction(info, tab);
 });
+
+// Call immediately on background script execution
+updateContextMenus();
+
