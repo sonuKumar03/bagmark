@@ -4,6 +4,24 @@ import { formatRelativeTime } from '../lib/utils';
 
 let allItems: BookmarkMetadata[] = [];
 
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function sanitizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.href;
+    }
+  } catch {
+    // Invalid URL fallback
+  }
+  return '#';
+}
+
 async function loadBookmarks() {
   const metadataMap = await getAllMetadata();
   allItems = Object.values(metadataMap).sort((a, b) => b.dateAdded - a.dateAdded);
@@ -40,41 +58,69 @@ function renderList(items: BookmarkMetadata[]) {
   }
 
   listEl.innerHTML = items
-    .map(
-      (item) => `
-    <div class="bookmark-card" data-id="${item.id}">
-      <a href="${item.url}" target="_blank" class="card-title" title="${item.title}">${item.title}</a>
-      ${item.quote ? `<div class="quote-snippet">"${item.quote}"</div>` : ''}
+    .map((item) => {
+      const safeUrl = sanitizeUrl(item.url);
+      const escapedUrl = escapeHtml(safeUrl);
+      const escapedTitle = escapeHtml(item.title);
+      const escapedFolder = escapeHtml(item.folderTitle || 'Default');
+      const escapedId = escapeHtml(item.id);
+      const quoteHtml = item.quote ? `<div class="quote-snippet">"${escapeHtml(item.quote)}"</div>` : '';
+
+      return `
+    <div class="bookmark-card" data-id="${escapedId}">
+      <a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" class="card-title" title="${escapedTitle}">${escapedTitle}</a>
+      ${quoteHtml}
       <div class="card-meta">
-        <span class="folder-badge">📁 ${item.folderTitle || 'Default'}</span>
+        <span class="folder-badge">📁 ${escapedFolder}</span>
         <span class="time-badge">${formatRelativeTime(item.dateAdded)}</span>
       </div>
       <div class="card-actions">
-        <button class="action-btn copy-btn" data-url="${item.url}">Copy</button>
-        <button class="action-btn delete delete-btn" data-id="${item.id}">Delete</button>
+        <button class="action-btn copy-btn" data-url="${escapedUrl}">Copy</button>
+        <button class="action-btn delete delete-btn" data-id="${escapedId}">Delete</button>
       </div>
     </div>
-  `
-    )
+  `;
+    })
     .join('');
+}
 
-  // Event handlers
-  listEl.querySelectorAll('.copy-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      const target = e.currentTarget as HTMLButtonElement;
-      const url = target.getAttribute('data-url');
-      if (url) {
-        navigator.clipboard.writeText(url);
-        target.textContent = 'Copied!';
-        setTimeout(() => (target.textContent = 'Copy'), 1500);
-      }
-    });
+function filterAndRender() {
+  const searchInput = (document.getElementById('searchInput') as HTMLInputElement).value.toLowerCase();
+  const folderFilter = (document.getElementById('folderFilter') as HTMLSelectElement).value;
+
+  const filtered = allItems.filter((item) => {
+    const matchesTags = Array.isArray(item.tags) && item.tags.some((t) => t.toLowerCase().includes(searchInput));
+    const matchesSearch =
+      item.title.toLowerCase().includes(searchInput) ||
+      item.url.toLowerCase().includes(searchInput) ||
+      (item.quote && item.quote.toLowerCase().includes(searchInput)) ||
+      matchesTags;
+    const matchesFolder = folderFilter === 'all' || item.folderTitle === folderFilter;
+    return matchesSearch && matchesFolder;
   });
 
-  listEl.querySelectorAll('.delete-btn').forEach((btn) => {
-    btn.addEventListener('click', async (e) => {
-      const target = e.currentTarget as HTMLButtonElement;
-      const id = target.getAttribute('data-id');
+  renderList(filtered);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const listEl = document.getElementById('bookmarkList');
+  listEl?.addEventListener('click', async (e) => {
+    const copyBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('.copy-btn');
+    if (copyBtn) {
+      const url = copyBtn.getAttribute('data-url');
+      if (url) {
+        await navigator.clipboard.writeText(url);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy';
+        }, 1500);
+      }
+      return;
+    }
+
+    const deleteBtn = (e.target as HTMLElement).closest<HTMLButtonElement>('.delete-btn');
+    if (deleteBtn) {
+      const id = deleteBtn.getAttribute('data-id');
       if (id) {
         try {
           await browser.bookmarks.remove(id);
@@ -85,27 +131,9 @@ function renderList(items: BookmarkMetadata[]) {
         allItems = allItems.filter((i) => i.id !== id);
         filterAndRender();
       }
-    });
-  });
-}
-
-function filterAndRender() {
-  const searchInput = (document.getElementById('searchInput') as HTMLInputElement).value.toLowerCase();
-  const folderFilter = (document.getElementById('folderFilter') as HTMLSelectElement).value;
-
-  const filtered = allItems.filter((item) => {
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchInput) ||
-      item.url.toLowerCase().includes(searchInput) ||
-      (item.quote && item.quote.toLowerCase().includes(searchInput));
-    const matchesFolder = folderFilter === 'all' || item.folderTitle === folderFilter;
-    return matchesSearch && matchesFolder;
+    }
   });
 
-  renderList(filtered);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
   loadBookmarks();
 
   document.getElementById('searchInput')?.addEventListener('input', filterAndRender);
