@@ -60,13 +60,29 @@
 
 ## 📦 Distribution & Packaging
 
-To generate a distributable `.zip` file for Mozilla Add-ons (AMO) signing:
-
+### Local Packaging
+To generate a local `.zip` bundle for manual testing or upload:
 ```bash
 npm run package
 ```
+The resulting zip will be created in `web-ext-artifacts/`.
 
-The resulting zip will be generated in `web-ext-artifacts/`. You can upload this directly to [Mozilla Add-on Developer Hub](https://addons.mozilla.org/developers/) for self-distribution (instant automated signing) or public store listing.
+### 🚀 Automated Releases & Mozilla AMO Signing
+This repository is configured with a GitHub Actions workflow that automatically builds, tests, signs with Mozilla AMO, and publishes a GitHub Release when a git tag is pushed:
+
+```bash
+# 1. Tag a new version
+git tag v1.0.3
+
+# 2. Push tag to GitHub
+git push origin v1.0.3
+```
+
+GitHub Actions will automatically:
+1. Extract the version (`1.0.3`) and sync `package.json` & `manifest.json`.
+2. Run test suites (`npm test`) and build the extension.
+3. Sign the `.xpi` via Mozilla Add-ons (AMO) API using repository secrets (`AMO_JWT_ISSUER`, `AMO_JWT_SECRET`).
+4. Publish a [GitHub Release](https://github.com/sonuKumar03/bagmark/releases) with the signed `.xpi` attached for 1-click install in Firefox.
 
 ---
 
