@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" fill="none">
+  <defs>
+    <linearGradient id="bagGrad" x1="20" y1="30" x2="76" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <linearGradient id="ribbonGrad" x1="40" y1="24" x2="56" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F87171" />
+      <stop offset="100%" stop-color="#DC2626" />
+    </linearGradient>
+  </defs>
+
+  <!-- Bag Handles -->
+  <path d="M 34 34 V 20 C 34 11 62 11 62 20 V 34" stroke="#92400E" stroke-width="5" stroke-linecap="round" fill="none" />
+  <path d="M 34 34 V 20 C 34 13 62 13 62 20 V 34" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round" fill="none" />
+
+  <!-- Bag Body -->
+  <path d="M 22 34 L 17 78 C 16.5 83.5 21 86 26 86 H 70 C 75 86 79.5 83.5 79 78 L 74 34 Z" fill="url(#bagGrad)" />
+
+  <!-- Bag Rim / Fold -->
+  <rect x="20" y="32" width="56" height="7" rx="3.5" fill="#B45309" />
+
+  <!-- Front Pocket -->
+  <path d="M 28 54 H 68 C 68 54 67 76 65 77 C 63 78 33 78 31 77 C 29 76 28 54 28 54 Z" fill="#B45309" opacity="0.25" stroke="#FEF3C7" stroke-width="1.5" stroke-dasharray="3 2" />
+
+  <!-- Bookmark Ribbon hanging down from inside bag -->
+  <path d="M 40 24 H 56 V 62 L 48 54 L 40 62 Z" fill="url(#ribbonGrad)" />
+
+  <!-- Bookmark ribbon highlight line -->
+  <path d="M 43 26 V 52" stroke="#FEE2E2" stroke-width="1" stroke-linecap="round" opacity="0.7" />
+
+  <!-- Bag Handle Rivets / Mounts -->
+  <circle cx="34" cy="35.5" r="2" fill="#78350F" />
+  <circle cx="62" cy="35.5" r="2" fill="#78350F" />
+</svg>
