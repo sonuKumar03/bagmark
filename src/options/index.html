@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BagMark Settings</title>
+  <link rel="stylesheet" href="./options.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="settings-header">
+      <span class="logo">🎒</span>
+      <h1>BagMark Settings</h1>
+    </header>
+
+    <section class="section">
+      <h2>General Preferences</h2>
+      
+      <div class="form-group">
+        <label for="defaultFolderName">Default Folder Name</label>
+        <input type="text" id="defaultFolderName" value="BagMark" />
+        <small>Primary root folder created under Other Bookmarks for 1-click saves.</small>
+      </div>
+
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" id="enableDateSubfolders" />
+          <span>Organize into Date Subfolders (e.g. <code>BagMark / 2026-09</code>)</span>
+        </label>
+      </div>
+
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" id="warnDuplicates" />
+          <span>Warn when saving duplicate links</span>
+        </label>
+      </div>
+
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" id="showNotifications" />
+          <span>Show desktop notification confirmations</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Context Submenu Pinned Folders</h2>
+      <p class="section-desc">Select folders to display in the right-click "Bag It to ▸" submenu:</p>
+      <div id="folderList" class="folder-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <footer class="footer">
+      <button id="btnSave" class="btn primary">Save Changes</button>
+      <span id="saveStatus" class="status-msg"></span>
+    </footer>
+  </div>
+
+  <script type="module" src="./options.ts"></script>
+</body>
+</html>
