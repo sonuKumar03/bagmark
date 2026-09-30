@@ -49,6 +49,10 @@ async function handleSaveAction(
   info: browser.menus.OnClickData,
   tab?: browser.tabs.Tab
 ) {
+  if (info.menuItemId === SUBMENU_ROOT_ID) {
+    return;
+  }
+
   const settings = await getSettings();
   const targetUrl = info.linkUrl || info.pageUrl || tab?.url;
   if (!targetUrl) return;
@@ -75,60 +79,72 @@ async function handleSaveAction(
     }
   }
 
-  // Determine base folder
-  let baseFolderId: string;
-  let baseFolderTitle: string = settings.defaultFolderName;
+  try {
+    // Determine base folder
+    let baseFolderId: string;
+    let baseFolderTitle: string = settings.defaultFolderName;
 
-  if (info.menuItemId.toString().startsWith('bagmark_target_')) {
-    baseFolderId = info.menuItemId.toString().replace('bagmark_target_', '');
-    const folderNodes = await browser.bookmarks.get(baseFolderId);
-    baseFolderTitle = folderNodes[0]?.title || 'Folder';
-  } else {
-    const rootNode = await ensureRootFolder(settings.defaultFolderName);
-    baseFolderId = rootNode.id;
-    baseFolderTitle = rootNode.title;
-  }
+    if (info.menuItemId.toString().startsWith('bagmark_target_')) {
+      baseFolderId = info.menuItemId.toString().replace('bagmark_target_', '');
+      const folderNodes = await browser.bookmarks.get(baseFolderId);
+      baseFolderTitle = folderNodes[0]?.title || 'Folder';
+    } else {
+      const rootNode = await ensureRootFolder(settings.defaultFolderName);
+      baseFolderId = rootNode.id;
+      baseFolderTitle = rootNode.title;
+    }
 
-  // Determine destination folder (auto-date subfolder if enabled)
-  let destFolderId = baseFolderId;
-  let destFolderTitle = baseFolderTitle;
+    // Determine destination folder (auto-date subfolder if enabled)
+    let destFolderId = baseFolderId;
+    let destFolderTitle = baseFolderTitle;
 
-  if (settings.enableDateSubfolders) {
-    const dateNode = await ensureDateSubfolder(baseFolderId, new Date());
-    destFolderId = dateNode.id;
-    destFolderTitle = `${baseFolderTitle} / ${dateNode.title}`;
-  }
+    if (settings.enableDateSubfolders) {
+      const dateNode = await ensureDateSubfolder(baseFolderId, new Date());
+      destFolderId = dateNode.id;
+      destFolderTitle = `${baseFolderTitle} / ${dateNode.title}`;
+    }
 
-  // Create Bookmark
-  const newBookmark = await browser.bookmarks.create({
-    parentId: destFolderId,
-    title: targetTitle,
-    url: targetUrl,
-  });
-
-  // Store Rich Metadata
-  const metadata: BookmarkMetadata = {
-    id: newBookmark.id,
-    url: targetUrl,
-    title: targetTitle,
-    dateAdded: newBookmark.dateAdded || Date.now(),
-    folderId: destFolderId,
-    folderTitle: destFolderTitle,
-    sourcePageUrl,
-    sourcePageTitle,
-    quote,
-    tags: [],
-  };
-  await saveMetadata(metadata);
-
-  // Notification confirmation
-  if (settings.showNotifications) {
-    browser.notifications.create({
-      type: 'basic',
-      iconUrl: 'assets/icon-48.png',
-      title: 'Bagged Successfully! 🎒',
-      message: `Saved "${targetTitle}" to ${destFolderTitle}`,
+    // Create Bookmark
+    const newBookmark = await browser.bookmarks.create({
+      parentId: destFolderId,
+      title: targetTitle,
+      url: targetUrl,
     });
+
+    // Store Rich Metadata
+    const metadata: BookmarkMetadata = {
+      id: newBookmark.id,
+      url: targetUrl,
+      title: targetTitle,
+      dateAdded: newBookmark.dateAdded || Date.now(),
+      folderId: destFolderId,
+      folderTitle: destFolderTitle,
+      sourcePageUrl,
+      sourcePageTitle,
+      quote,
+      tags: [],
+    };
+    await saveMetadata(metadata);
+
+    // Notification confirmation
+    if (settings.showNotifications) {
+      browser.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icon-48.png',
+        title: 'Bagged Successfully! 🎒',
+        message: `Saved "${targetTitle}" to ${destFolderTitle}`,
+      });
+    }
+  } catch (error) {
+    console.error('Failed to save bookmark:', error);
+    if (settings.showNotifications) {
+      browser.notifications.create({
+        type: 'basic',
+        iconUrl: 'assets/icon-48.png',
+        title: 'BagMark Save Failed',
+        message: 'Could not save bookmark. Target folder may no longer exist.',
+      });
+    }
   }
 }
 
