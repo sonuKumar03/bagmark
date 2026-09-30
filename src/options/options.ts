@@ -1,6 +1,8 @@
 import { getSettings, saveSettings } from '../lib/config';
 import { getFolderHierarchy } from '../lib/bookmarks';
 
+let statusTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export async function initOptions() {
   const settings = await getSettings();
 
@@ -63,16 +65,24 @@ export async function initOptions() {
     const finalFolderName = defaultFolderInput.value.trim() || 'BagMark';
     defaultFolderInput.value = finalFolderName;
 
-    await saveSettings({
-      defaultFolderName: finalFolderName,
-      enableDateSubfolders: dateSubfoldersCheckbox.checked,
-      warnDuplicates: warnDuplicatesCheckbox.checked,
-      showNotifications: showNotificationsCheckbox.checked,
-      favoriteFolderIds: selectedFavorites,
-    });
+    try {
+      await saveSettings({
+        defaultFolderName: finalFolderName,
+        enableDateSubfolders: dateSubfoldersCheckbox.checked,
+        warnDuplicates: warnDuplicatesCheckbox.checked,
+        showNotifications: showNotificationsCheckbox.checked,
+        favoriteFolderIds: selectedFavorites,
+      });
 
-    statusMsg.textContent = 'Settings saved successfully! ✓';
-    setTimeout(() => {
+      statusMsg.textContent = 'Settings saved successfully! ✓';
+      statusMsg.style.color = 'var(--success, #10b981)';
+    } catch {
+      statusMsg.textContent = 'Failed to save settings. Please try again.';
+      statusMsg.style.color = '#ef4444';
+    }
+
+    if (statusTimeout) clearTimeout(statusTimeout);
+    statusTimeout = setTimeout(() => {
       statusMsg.textContent = '';
     }, 2500);
   });

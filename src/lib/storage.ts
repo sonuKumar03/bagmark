@@ -19,7 +19,10 @@ export async function getAllMetadata(): Promise<Record<string, BookmarkMetadata>
   for (const [key, value] of Object.entries(all || {})) {
     if (key.startsWith(METADATA_PREFIX)) {
       const meta = value as BookmarkMetadata;
-      metadataMap[meta.id] = meta;
+      const id = meta?.id || key.slice(METADATA_PREFIX.length);
+      if (id && meta && typeof meta === 'object') {
+        metadataMap[id] = { ...meta, id };
+      }
     }
   }
   return metadataMap;

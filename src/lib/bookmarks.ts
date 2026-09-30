@@ -84,9 +84,12 @@ export async function getFolderHierarchy(): Promise<Array<{ id: string; title: s
   function traverse(nodes: browser.bookmarks.BookmarkTreeNode[], currentPath: string) {
     for (const node of nodes) {
       if (!node.url) {
-        const nextPath = currentPath ? `${currentPath} / ${node.title || 'Bookmarks'}` : (node.title || 'Bookmarks');
-        if (node.id !== 'root________') {
-          folders.push({ id: node.id, title: node.title || 'Folder', path: nextPath });
+        const title = node.title || (node.id === 'root________' ? '' : 'Folder');
+        const nextPath = node.id === 'root________'
+          ? ''
+          : (currentPath ? `${currentPath} / ${title}` : title);
+        if (node.id !== 'root________' && title) {
+          folders.push({ id: node.id, title, path: nextPath });
         }
         if (node.children) {
           traverse(node.children, nextPath);

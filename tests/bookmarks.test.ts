@@ -122,6 +122,11 @@ describe('bookmarks operations', () => {
     expect(folders.some((f) => f.title === 'Other Bookmarks')).toBe(true);
     expect(folders.some((f) => f.title === 'BagMark')).toBe(true);
     expect(folders.some((f) => f.title === '2026-09')).toBe(true);
+
+    const bagmarkFolder = folders.find((f) => f.title === 'BagMark');
+    expect(bagmarkFolder?.path).toBe('Other Bookmarks / BagMark');
+    const dateFolder = folders.find((f) => f.title === '2026-09');
+    expect(dateFolder?.path).toBe('Other Bookmarks / BagMark / 2026-09');
   });
 
   it('saves new bookmark and returns duplicate flag if already exists', async () => {

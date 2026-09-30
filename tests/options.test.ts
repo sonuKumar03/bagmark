@@ -117,7 +117,7 @@ describe('options page', () => {
     expect(elements.folderList.children.length).toBe(3); // Other Bookmarks, folder_xss, folder_normal
     const xssLabel = elements.folderList.children[1];
     const span = xssLabel.children[1];
-    expect(span.textContent).toBe('📁 Bookmarks / Other Bookmarks / <script>alert(1)</script> & "quotes"');
+    expect(span.textContent).toBe('📁 Other Bookmarks / <script>alert(1)</script> & "quotes"');
   });
 
   it('marks pinned folders as checked if present in settings', async () => {
@@ -158,6 +158,7 @@ describe('options page', () => {
     });
 
     expect(elements.saveStatus.textContent).toBe('Settings saved successfully! ✓');
+    expect(elements.saveStatus.style.color).toBe('var(--success, #10b981)');
   });
 
   it('falls back to "BagMark" if defaultFolderName is whitespace or empty', async () => {
@@ -168,6 +169,18 @@ describe('options page', () => {
 
     expect(elements.defaultFolderName.value).toBe('BagMark');
     expect(mockStore['bagmark_settings'].defaultFolderName).toBe('BagMark');
+  });
+
+  it('displays error message when saving settings fails', async () => {
+    (globalThis as any).browser.storage.local.set = vi.fn(async () => {
+      throw new Error('Storage write failed');
+    });
+
+    await initOptions();
+    await elements.btnSave.click();
+
+    expect(elements.saveStatus.textContent).toBe('Failed to save settings. Please try again.');
+    expect(elements.saveStatus.style.color).toBe('#ef4444');
   });
 
   it('handles bookmarks.getTree error gracefully', async () => {

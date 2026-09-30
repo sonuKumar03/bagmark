@@ -74,4 +74,16 @@ describe('storage & config', () => {
 
     expect(await getMetadata('non_existent')).toBeNull();
   });
+
+  it('recovers id from key if id is missing or corrupted in getAllMetadata', async () => {
+    await browser.storage.local.set({
+      bagmark_meta_corrupted_1: { url: 'https://example.com/1', title: 'Missing ID' },
+      bagmark_meta_corrupted_2: { id: '', url: 'https://example.com/2', title: 'Empty ID' },
+    });
+    const all = await getAllMetadata();
+    expect(all['corrupted_1']).toBeDefined();
+    expect(all['corrupted_1'].id).toBe('corrupted_1');
+    expect(all['corrupted_2']).toBeDefined();
+    expect(all['corrupted_2'].id).toBe('corrupted_2');
+  });
 });
