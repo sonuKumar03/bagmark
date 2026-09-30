@@ -42,11 +42,10 @@ export function normalizeUrl(rawUrl: string): string {
     // Remove hash
     url.hash = '';
     // Strip trailing slash if pathname ends with /
-    let clean = url.toString();
-    if (clean.endsWith('/') && url.pathname !== '/') {
-      clean = clean.slice(0, -1);
+    if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
+      url.pathname = url.pathname.slice(0, -1);
     }
-    return clean;
+    return url.toString();
   } catch {
     return rawUrl.trim();
   }
