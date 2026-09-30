@@ -33,7 +33,12 @@ async function loadBookmarks() {
 function populateFolderFilter(items: BookmarkMetadata[]) {
   const folderFilter = document.getElementById('folderFilter') as HTMLSelectElement;
   const folders = Array.from(new Set(items.map((i) => i.folderTitle).filter(Boolean)));
-  folderFilter.innerHTML = '<option value="all">All Folders</option>';
+  folderFilter.replaceChildren();
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = 'all';
+  defaultOpt.textContent = 'All Folders';
+  folderFilter.appendChild(defaultOpt);
+
   folders.forEach((f) => {
     const opt = document.createElement('option');
     opt.value = f;
@@ -47,42 +52,78 @@ function renderList(items: BookmarkMetadata[]) {
   const countEl = document.getElementById('bookmarkCount')!;
   countEl.textContent = `${items.length} ${items.length === 1 ? 'item' : 'items'}`;
 
+  listEl.replaceChildren();
+
   if (items.length === 0) {
-    listEl.innerHTML = `
-      <div class="empty-state">
-        <p>No bookmarks found.</p>
-        <small>Right-click any link and select "Bag It" to save!</small>
-      </div>
-    `;
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'empty-state';
+    const p = document.createElement('p');
+    p.textContent = 'No bookmarks found.';
+    const small = document.createElement('small');
+    small.textContent = 'Right-click any link and select "Bag It" to save!';
+    emptyDiv.appendChild(p);
+    emptyDiv.appendChild(small);
+    listEl.appendChild(emptyDiv);
     return;
   }
 
-  listEl.innerHTML = items
-    .map((item) => {
-      const safeUrl = sanitizeUrl(item.url);
-      const escapedUrl = escapeHtml(safeUrl);
-      const escapedTitle = escapeHtml(item.title);
-      const escapedFolder = escapeHtml(item.folderTitle || 'Default');
-      const escapedId = escapeHtml(item.id);
-      const quoteHtml = item.quote ? `<div class="quote-snippet">"${escapeHtml(item.quote)}"</div>` : '';
+  for (const item of items) {
+    const card = document.createElement('div');
+    card.className = 'bookmark-card';
+    card.dataset.id = item.id;
 
-      return `
-    <div class="bookmark-card" data-id="${escapedId}">
-      <a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" class="card-title" title="${escapedTitle}">${escapedTitle}</a>
-      ${quoteHtml}
-      <div class="card-meta">
-        <span class="folder-badge">📁 ${escapedFolder}</span>
-        <span class="time-badge">${formatRelativeTime(item.dateAdded)}</span>
-      </div>
-      <div class="card-actions">
-        <button class="action-btn copy-btn" data-url="${escapedUrl}">Copy</button>
-        <button class="action-btn delete delete-btn" data-id="${escapedId}">Delete</button>
-      </div>
-    </div>
-  `;
-    })
-    .join('');
+    const link = document.createElement('a');
+    link.href = sanitizeUrl(item.url);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.className = 'card-title';
+    link.title = item.title;
+    link.textContent = item.title;
+    card.appendChild(link);
+
+    if (item.quote) {
+      const quoteDiv = document.createElement('div');
+      quoteDiv.className = 'quote-snippet';
+      quoteDiv.textContent = `"${item.quote}"`;
+      card.appendChild(quoteDiv);
+    }
+
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'card-meta';
+
+    const folderBadge = document.createElement('span');
+    folderBadge.className = 'folder-badge';
+    folderBadge.textContent = `📁 ${item.folderTitle || 'Default'}`;
+
+    const timeBadge = document.createElement('span');
+    timeBadge.className = 'time-badge';
+    timeBadge.textContent = formatRelativeTime(item.dateAdded);
+
+    metaDiv.appendChild(folderBadge);
+    metaDiv.appendChild(timeBadge);
+    card.appendChild(metaDiv);
+
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'card-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'action-btn copy-btn';
+    copyBtn.dataset.url = sanitizeUrl(item.url);
+    copyBtn.textContent = 'Copy';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'action-btn delete delete-btn';
+    deleteBtn.dataset.id = item.id;
+    deleteBtn.textContent = 'Delete';
+
+    actionsDiv.appendChild(copyBtn);
+    actionsDiv.appendChild(deleteBtn);
+    card.appendChild(actionsDiv);
+
+    listEl.appendChild(card);
+  }
 }
+
 
 function filterAndRender() {
   const searchInput = (document.getElementById('searchInput') as HTMLInputElement).value.toLowerCase();
