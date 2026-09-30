@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "BagMark - Advanced Bookmarks",
+  "version": "1.0.0",
+  "description": "Right-click to save bookmarks to custom or date-based folders with rich metadata.",
+  "permissions": [
+    "bookmarks",
+    "menus",
+    "storage",
+    "notifications",
+    "tabs"
+  ],
+  "background": {
+    "scripts": ["src/background/index.ts"],
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "BagMark Dashboard"
+  },
+  "options_ui": {
+    "page": "src/options/index.html",
+    "open_in_tab": true
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "bagmark@local.extension",
+      "strict_min_version": "109.0"
+    }
+  }
+}
