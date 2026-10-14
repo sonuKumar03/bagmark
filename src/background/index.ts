@@ -2,6 +2,7 @@ import '../lib/browser';
 import { saveBookmark } from '../lib/bookmarks';
 import { getSettings } from '../lib/config';
 import { formatDisplayDate } from '../lib/utils';
+import { saveOpenTabs } from '../lib/tabs';
 
 const QUICK_SAVE_ID = 'bagmark_quick_save';
 const SUBMENU_ROOT_ID = 'bagmark_submenu_root';
@@ -120,4 +121,13 @@ browser.storage.onChanged.addListener((changes, area) => {
 
 browser.contextMenus.onClicked.addListener((info, tab) => {
   return handleSaveAction(info, tab);
+});
+
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== 'save-open-tabs' || sender.id !== browser.runtime.id) return false;
+  saveOpenTabs(message).then(sendResponse, (error) => {
+    sendResponse({ error: error instanceof Error ? error.message : 'Could not save open tabs.' });
+  });
+  // Keep the response channel open on Chromium versions without async listener support.
+  return true;
 });

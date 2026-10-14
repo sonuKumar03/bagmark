@@ -1,7 +1,8 @@
 import '../lib/browser';
 import { getAllMetadata, deleteMetadata } from '../lib/storage';
-import { BookmarkMetadata } from '../lib/types';
-import { formatRelativeTime } from '../lib/utils';
+import { BookmarkMetadata, SaveOpenTabsResult } from '../lib/types';
+import { formatRelativeTime, isBookmarkableUrl } from '../lib/utils';
+import { getFolderHierarchy } from '../lib/bookmarks';
 
 let allItems: BookmarkMetadata[] = [];
 
@@ -144,6 +145,89 @@ function filterAndRender() {
   renderList(filtered);
 }
 
+async function initTabSaving() {
+  const form = document.getElementById('saveTabsForm') as HTMLFormElement;
+  const fields = document.getElementById('saveTabsFields') as HTMLFieldSetElement;
+  const folderSelect = document.getElementById('saveTabsFolder') as HTMLSelectElement;
+  const createFolder = document.getElementById('createTabFolder') as HTMLInputElement;
+  const folderName = document.getElementById('tabFolderName') as HTMLInputElement;
+  const button = document.getElementById('btnSaveTabs') as HTMLButtonElement;
+  const status = document.getElementById('saveTabsStatus')!;
+  let windowId: number;
+  let count = 0;
+
+  function updateFolderMode() {
+    document.getElementById('tabFolderNameField')!.hidden = !createFolder.checked;
+    document.getElementById('saveTabsFolderLabel')!.textContent = createFolder.checked ? 'Parent folder' : 'Save to folder';
+    folderName.disabled = !createFolder.checked;
+    folderName.required = createFolder.checked;
+  }
+  createFolder.addEventListener('change', updateFolderMode);
+
+  async function loadFolders(selectedId = '') {
+    const folders = await getFolderHierarchy();
+    folderSelect.replaceChildren(new Option('Choose a folder', ''));
+    for (const folder of folders) folderSelect.add(new Option(folder.path, folder.id));
+    folderSelect.value = selectedId;
+    if (!folders.length) throw new Error('No writable folders available. Create a folder in the bookmark manager first.');
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (fields.disabled) return;
+    if (createFolder.checked && !folderName.value.trim()) {
+      folderName.setCustomValidity('Enter a folder name.');
+      folderName.reportValidity();
+      return;
+    }
+    fields.disabled = true;
+    status.dataset.error = 'false';
+    status.textContent = 'Saving tabs…';
+    try {
+      const result: SaveOpenTabsResult | { error: string } = await browser.runtime.sendMessage({
+        type: 'save-open-tabs',
+        windowId,
+        targetFolderId: folderSelect.value,
+        newFolderName: createFolder.checked ? folderName.value.trim() : undefined,
+      });
+      if (!result) throw new Error('No response. Reload BagMark and try again.');
+      if ('error' in result) throw new Error(result.error);
+      status.textContent = `${result.saved} saved · ${result.skipped} skipped · ${result.failed} failed.`;
+      status.dataset.error = String(result.failed > 0);
+      if (result.failed) status.textContent += ' Check the folder before retrying.';
+      if (result.folderId) {
+        await loadFolders(result.folderId);
+        createFolder.checked = false;
+        updateFolderMode();
+      }
+      await loadBookmarks();
+    } catch (error) {
+      status.dataset.error = 'true';
+      status.textContent = error instanceof Error ? error.message : 'Could not save tabs. Check the folder and try again.';
+    } finally {
+      fields.disabled = false;
+      button.disabled = count === 0;
+    }
+  });
+  folderName.addEventListener('input', () => folderName.setCustomValidity(''));
+
+  try {
+    const currentWindow = await browser.windows.getCurrent();
+    if (currentWindow.id === undefined) throw new Error('Could not identify this window. Reopen BagMark.');
+    windowId = currentWindow.id;
+    const [tabs] = await Promise.all([browser.tabs.query({ windowId }), loadFolders()]);
+    count = tabs.filter((tab) => isBookmarkableUrl(tab.url)).length;
+    document.getElementById('tabPreview')!.textContent = `${count} web ${count === 1 ? 'tab' : 'tabs'} in this window`;
+    button.textContent = `Save ${count} ${count === 1 ? 'tab' : 'tabs'}`;
+    fields.disabled = false;
+    button.disabled = count === 0;
+  } catch (error) {
+    status.dataset.error = 'true';
+    status.textContent = error instanceof Error ? error.message : 'Could not load tabs or folders. Reopen BagMark to retry.';
+    document.getElementById('tabPreview')!.textContent = 'Tab saving unavailable';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const listEl = document.getElementById('bookmarkList');
   listEl?.addEventListener('click', async (e) => {
@@ -177,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loadBookmarks();
+  initTabSaving();
 
   document.getElementById('searchInput')?.addEventListener('input', filterAndRender);
   document.getElementById('folderFilter')?.addEventListener('change', filterAndRender);

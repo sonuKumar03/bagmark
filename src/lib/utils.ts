@@ -44,3 +44,13 @@ export function normalizeUrl(rawUrl: string): string {
     return rawUrl.trim();
   }
 }
+
+export function isBookmarkableUrl(rawUrl?: string): boolean {
+  if (!rawUrl) return false;
+  try {
+    const { protocol } = new URL(rawUrl);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}

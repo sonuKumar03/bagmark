@@ -14,6 +14,7 @@
 - **Rich Metadata Capture**: Automatically records exact timestamps (`dateAdded`), originating webpage URL/title, and any highlighted quote/text excerpt into local storage.
 - **Duplicate Link Detection**: Skips links already saved in the destination folder while allowing the same link in other collections. Compares both URLs without known tracking parameters, preserving meaningful query parameters, fragments, and path differences. Disable this in Settings to allow repeated links in the same folder.
 - **Interactive Popup Dashboard**: Fast, search-as-you-type dashboard to filter bookmarks by title, URL, quote, or tags, with folder filters, relative time badges, and 1-click clipboard copy.
+- **Save Open Tabs**: Expand **Save open tabs** in the popup, choose an existing folder or create a new subfolder, and save all web tabs from the current window in tab order. Tabs stay open, browser pages are skipped, and the result shows saved, skipped, and failed counts. The chosen folder is used directly, without automatic date subfolders.
 - **Options & Customization**: Configure default folder name, toggle date-based subfolders, manage pinned submenu folders, and adjust alert notifications.
 - **Modern Stack**: Built with TypeScript, Vite, Vitest, and Manifest V3.
 

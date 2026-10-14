@@ -26,3 +26,17 @@ export const DEFAULT_SETTINGS: BagMarkSettings = {
   favoriteFolderIds: [],
   showNotifications: true,
 };
+
+export interface SaveOpenTabsRequest {
+  type: 'save-open-tabs';
+  windowId: number;
+  targetFolderId: string;
+  newFolderName?: string;
+}
+
+export interface SaveOpenTabsResult {
+  saved: number;
+  skipped: number;
+  failed: number;
+  folderId?: string;
+}

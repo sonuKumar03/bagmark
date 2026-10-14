@@ -8,6 +8,7 @@
   --accent-hover: #d97706;
   --border: #3f3f4e;
   --danger: #ef4444;
+  --error-text: #fca5a5;
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -101,8 +102,49 @@ h1 {
   gap: 8px;
   overflow-y: auto;
   max-height: 400px;
+  min-height: 0;
   padding-right: 4px;
 }
+
+.save-tabs {
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.save-tabs summary { cursor: pointer; padding: 6px 0; font-weight: 600; }
+.save-tabs fieldset { border: 0; margin: 0; padding: 0; }
+.save-tabs label { display: block; margin: 8px 0 4px; }
+.save-tabs select, .save-tabs input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text-main);
+  font: inherit;
+}
+.save-tabs .new-folder-toggle { display: flex; align-items: center; gap: 6px; margin: 10px 0; }
+.save-tabs input[type="checkbox"] { accent-color: var(--accent); }
+.save-tabs-button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--bg-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.save-tabs-button:hover:not(:disabled) { background: var(--accent-hover); }
+.save-tabs-button:disabled { opacity: 0.5; cursor: default; }
+.save-tabs :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#tabPreview, .save-tabs-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 6px 0; }
+#saveTabsStatus { display: block; line-height: 1.5; overflow-wrap: anywhere; }
+#saveTabsStatus[data-error="true"] { color: var(--error-text); }
 
 .bookmark-card {
   background: var(--card-bg);
@@ -155,7 +197,7 @@ h1 {
   color: var(--text-muted);
   background: rgba(0, 0, 0, 0.2);
   padding: 4px 8px;
-  border-left: 2px solid var(--accent);
+  border-left: 1px solid var(--accent);
   border-radius: 2px;
   overflow: hidden;
   text-overflow: ellipsis;

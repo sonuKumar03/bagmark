@@ -6,6 +6,7 @@ import {
   saveBookmark,
   saveBookmarks,
 } from '../src/lib/bookmarks';
+import { saveOpenTabs } from '../src/lib/tabs';
 
 describe('bookmarks operations', () => {
   let nodes: any[] = [];
@@ -266,7 +267,7 @@ describe('bookmarks operations', () => {
     const settings = { enableDateSubfolders: false, showNotifications: false };
     (browser.storage.local as any).get = vi.fn(async () => ({ bagmark_settings: settings }));
     (browser.storage as any).onChanged = { addListener: vi.fn() };
-    (browser as any).runtime = { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } };
+    (browser as any).runtime = { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() }, onMessage: { addListener: vi.fn() } };
     (browser as any).contextMenus = { onClicked: { addListener: (handler: typeof click) => { click = handler; } } };
     vi.resetModules();
     await import('../src/background/index');
@@ -284,6 +285,56 @@ describe('bookmarks operations', () => {
     expect(secondChildren).toHaveLength(1);
     expect(metadata[`bagmark_meta_${firstChildren[0].id}`]).toMatchObject({ title: 'Page title', quote: 'Original quote', folderTitle: 'First' });
     expect(metadata[`bagmark_meta_${secondChildren[0].id}`]).toMatchObject({ title: 'Other collection', folderTitle: 'Second' });
+  });
+
+  it('saves only the requested window in tab order and counts duplicate and unsupported tabs', async () => {
+    const folder = await ensureRootFolder();
+    const tabs = [
+      { id: 3, windowId: 7, index: 2, url: 'https://second.example', title: 'Second' },
+      { id: 1, windowId: 7, index: 0, url: 'https://first.example?utm_source=one', title: 'First' },
+      { id: 2, windowId: 7, index: 1, url: 'https://first.example?gclid=two', title: 'Repeated' },
+      { id: 4, windowId: 7, index: 3, url: 'chrome://settings', title: 'Settings' },
+      { id: 5, windowId: 8, index: 0, url: 'https://other-window.example', title: 'Another window' },
+    ];
+    (browser as any).tabs = { query: vi.fn(async ({ windowId }: any) => tabs.filter((tab) => tab.windowId === windowId)) };
+    (browser.storage.local as any).get = vi.fn(async () => ({ bagmark_settings: { enableDateSubfolders: true } }));
+    const result = await saveOpenTabs({ type: 'save-open-tabs', windowId: 7, targetFolderId: folder.id });
+    expect(result).toEqual({ saved: 2, skipped: 2, failed: 0, folderId: folder.id });
+    const children = await browser.bookmarks.getChildren(folder.id);
+    expect(children.map((node) => node.title)).toEqual(['First', 'Second']);
+    expect(metadata[`bagmark_meta_${children[0].id}`]).toMatchObject({ sourcePageTitle: 'First', folderId: folder.id });
+    expect(await saveOpenTabs({ type: 'save-open-tabs', windowId: 7, targetFolderId: folder.id })).toMatchObject({ saved: 0, skipped: 4 });
+  });
+
+  it('creates a new folder under the chosen parent only when web tabs exist', async () => {
+    const parent = await ensureRootFolder();
+    (browser as any).tabs = { query: vi.fn(async () => [{ index: 0, url: 'https://example.com', title: 'Page' }]) };
+    (browser.storage.local as any).get = vi.fn(async () => ({}));
+    const result = await saveOpenTabs({ type: 'save-open-tabs', windowId: 7, targetFolderId: parent.id, newFolderName: ' Research ' });
+    expect(result).toMatchObject({ saved: 1, skipped: 0, failed: 0 });
+    const [folder] = await browser.bookmarks.get(result.folderId!);
+    expect(folder).toMatchObject({ title: 'Research', parentId: parent.id });
+    expect((await browser.bookmarks.getChildren(folder.id)).map((node) => node.title)).toEqual(['Page']);
+    (browser as any).tabs = { query: vi.fn(async () => [{ index: 0, url: 'about:blank' }, { index: 1 }]) };
+    expect(await saveOpenTabs({ type: 'save-open-tabs', windowId: 7, targetFolderId: parent.id, newFolderName: 'Empty' })).toEqual({ saved: 0, skipped: 2, failed: 0 });
+    expect(await browser.bookmarks.getChildren(parent.id)).toHaveLength(1);
+  });
+
+  it('rejects an empty new-folder name without creating bookmarks', async () => {
+    await expect(saveOpenTabs({ type: 'save-open-tabs', windowId: 7, targetFolderId: 'folder', newFolderName: ' ' })).rejects.toThrow();
+    expect(nodes[0].children[0].children).toHaveLength(0);
+  });
+
+  it('reports individual save failures while continuing the window batch', async () => {
+    const folder = await ensureRootFolder();
+    (browser as any).tabs = { query: vi.fn(async () => [
+      { index: 0, url: 'https://failed.example', title: 'Failed' },
+      { index: 1, url: 'https://saved.example', title: 'Saved' },
+    ]) };
+    (browser.storage.local as any).get = vi.fn(async () => ({}));
+    vi.mocked(browser.bookmarks.create).mockRejectedValueOnce(new Error('Cannot save'));
+    expect(await saveOpenTabs({ type: 'save-open-tabs', windowId: 7, targetFolderId: folder.id })).toMatchObject({ saved: 1, skipped: 0, failed: 1 });
+    expect((await browser.bookmarks.getChildren(folder.id)).map((node) => node.title)).toEqual(['Saved']);
   });
 
   it('excludes Chromium root and managed folders from folder choices', async () => {
