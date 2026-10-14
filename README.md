@@ -83,6 +83,17 @@ npm run package
 ```
 The resulting zip will be created in `web-ext-artifacts/`.
 
+### Mozilla Reviewer Build Instructions
+
+The source archive contains the original TypeScript, assets, build configuration, and npm lockfile. On Linux, macOS, or Windows, install Node.js 22 with its bundled npm, extract the archive, and run from its root:
+
+```bash
+npm ci
+npm run build
+```
+
+The Firefox extension is generated in `dist/`. No credentials, environment variables, external services, or private dependencies are needed to reproduce this build. The release workflow uploads the source archive to Mozilla with the extension, for both listed and unlisted submissions.
+
 ### 🚀 Automated Releases & Mozilla AMO Signing
 This repository is configured with a GitHub Actions workflow that automatically builds, tests, signs with Mozilla AMO, and publishes a GitHub Release when a git tag is pushed:
 
