@@ -1,0 +1,5 @@
+{
+  "version": {
+    "approval_notes": "Build from the submitted source archive with Node.js 22 and npm: run npm ci, then npm run build from the project root. The Firefox extension output is dist/. No credentials or environment variables are required. To test, right-click a link or page and choose Bag It, then use the toolbar popup's Save open tabs action with an existing folder or a new subfolder. Repeat with duplicate prevention enabled; duplicates should be skipped only within the destination folder. Tabs remain open. Bookmark data and settings are stored locally; the extension has no analytics or developer-operated backend."
+  }
+}

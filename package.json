@@ -1,6 +1,6 @@
 {
   "name": "bag-bookmark",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Advanced bookmark extension for Firefox, Chrome, and Brave with date tracking, custom folders, and context menu quick-save",
   "type": "module",
   "scripts": {
