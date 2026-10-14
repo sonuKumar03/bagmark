@@ -20,14 +20,16 @@ describe('utils', () => {
     expect(formatted).toMatch(/3:30\s*PM/);
   });
 
-  it('normalizes URLs by stripping trailing slashes and common tracking parameters', () => {
+  it('strips known tracking parameters while preserving paths and fragments', () => {
     const raw = 'https://example.com/article/?utm_source=twitter&utm_medium=social#heading';
-    expect(normalizeUrl(raw)).toBe('https://example.com/article');
+    expect(normalizeUrl(raw)).toBe('https://example.com/article/#heading');
   });
 
-  it('strips trailing slash while preserving query parameters', () => {
-    const raw = 'https://example.com/article/?id=1&category=books';
-    expect(normalizeUrl(raw)).toBe('https://example.com/article?id=1&category=books');
+  it('preserves functional query parameters and distinct paths', () => {
+    const raw = 'https://example.com/article/?id=1&ref=books#chapter';
+    expect(normalizeUrl(raw)).toBe(raw);
+    expect(normalizeUrl('https://example.com/article')).not.toBe(normalizeUrl('https://example.com/article/'));
+    expect(normalizeUrl('https://example.com/#/one')).not.toBe(normalizeUrl('https://example.com/#/two'));
   });
 
   it('formats relative time for recent timestamps', () => {

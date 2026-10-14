@@ -1,3 +1,4 @@
+import '../lib/browser';
 import { getSettings, saveSettings } from '../lib/config';
 import { getFolderHierarchy } from '../lib/bookmarks';
 

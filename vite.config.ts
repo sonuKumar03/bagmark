@@ -2,7 +2,7 @@ import { defineConfig, Plugin } from 'vite';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 
-function manifestPlugin(): Plugin {
+function manifestPlugin(chromium: boolean): Plugin {
   return {
     name: 'vite-plugin-bagmark-manifest',
     generateBundle() {
@@ -10,10 +10,17 @@ function manifestPlugin(): Plugin {
       const manifestContent = JSON.parse(readFileSync(manifestPath, 'utf-8'));
 
       // Transform background script entry from TypeScript source to compiled bundle
-      manifestContent.background = {
+      manifestContent.background = chromium ? {
+        service_worker: 'background.js',
+        type: 'module'
+      } : {
         scripts: ['background.js'],
         type: 'module'
       };
+      if (chromium) {
+        delete manifestContent.browser_specific_settings;
+        manifestContent.minimum_chrome_version = '123';
+      }
 
       this.emitFile({
         type: 'asset',
@@ -24,10 +31,10 @@ function manifestPlugin(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [manifestPlugin()],
+export default defineConfig(({ mode }) => ({
+  plugins: [manifestPlugin(mode === 'chromium')],
   build: {
-    outDir: 'dist',
+    outDir: mode === 'chromium' ? 'dist-chromium' : 'dist',
     emptyOutDir: true,
     rollupOptions: {
       input: {
@@ -47,4 +54,4 @@ export default defineConfig({
       }
     }
   }
-});
+}));

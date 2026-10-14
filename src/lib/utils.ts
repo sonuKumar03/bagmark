@@ -34,19 +34,23 @@ export function normalizeUrl(rawUrl: string): string {
     // Strip common tracking parameters
     const paramsToDelete: string[] = [];
     url.searchParams.forEach((_, key) => {
-      if (key.startsWith('utm_') || key === 'ref' || key === 'fbclid' || key === 'gclid') {
+      if (key.startsWith('utm_') || key === 'fbclid' || key === 'gclid') {
         paramsToDelete.push(key);
       }
     });
     paramsToDelete.forEach((key) => url.searchParams.delete(key));
-    // Remove hash
-    url.hash = '';
-    // Strip trailing slash if pathname ends with /
-    if (url.pathname.length > 1 && url.pathname.endsWith('/')) {
-      url.pathname = url.pathname.slice(0, -1);
-    }
     return url.toString();
   } catch {
     return rawUrl.trim();
+  }
+}
+
+export function isBookmarkableUrl(rawUrl?: string): boolean {
+  if (!rawUrl) return false;
+  try {
+    const { protocol } = new URL(rawUrl);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
   }
 }

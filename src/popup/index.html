@@ -17,6 +17,30 @@
     </div>
   </header>
 
+  <details class="save-tabs">
+    <summary>Save open tabs</summary>
+    <form id="saveTabsForm">
+      <p id="tabPreview">Loading tabs in this window…</p>
+      <fieldset id="saveTabsFields" disabled>
+        <label for="saveTabsFolder" id="saveTabsFolderLabel">Save to folder</label>
+        <select id="saveTabsFolder" required>
+          <option value="">Choose a folder</option>
+        </select>
+        <label class="new-folder-toggle">
+          <input type="checkbox" id="createTabFolder" />
+          Create a new subfolder here
+        </label>
+        <div id="tabFolderNameField" hidden>
+          <label for="tabFolderName">New folder name</label>
+          <input id="tabFolderName" type="text" placeholder="e.g. Research" disabled />
+        </div>
+        <button type="submit" id="btnSaveTabs" class="save-tabs-button" disabled>Save tabs</button>
+      </fieldset>
+      <p class="save-tabs-hint">Tabs stay open. Browser pages are skipped; your duplicate setting applies.</p>
+      <output id="saveTabsStatus" role="status" aria-live="polite"></output>
+    </form>
+  </details>
+
   <div class="search-bar">
     <input type="text" id="searchInput" placeholder="Search saved links, tags, quotes..." autofocus />
   </div>
