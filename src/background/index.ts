@@ -1,8 +1,6 @@
 import '../lib/browser';
-import { ensureRootFolder, ensureDateSubfolder, findDuplicateBookmark } from '../lib/bookmarks';
+import { saveBookmark } from '../lib/bookmarks';
 import { getSettings } from '../lib/config';
-import { saveMetadata } from '../lib/storage';
-import { BookmarkMetadata } from '../lib/types';
 import { formatDisplayDate } from '../lib/utils';
 
 const QUICK_SAVE_ID = 'bagmark_quick_save';
@@ -59,82 +57,39 @@ async function handleSaveAction(
   if (!targetUrl) return;
 
   const targetTitle = info.linkText || tab?.title || targetUrl;
-  const quote = info.selectionText || undefined;
-  const sourcePageUrl = info.pageUrl;
-  const sourcePageTitle = tab?.title;
+  try {
+    const targetFolderId = info.menuItemId.toString().startsWith('bagmark_target_')
+      ? info.menuItemId.toString().replace('bagmark_target_', '')
+      : undefined;
+    const { node, isDuplicate, folderTitle } = await saveBookmark({
+      url: targetUrl,
+      title: targetTitle,
+      targetFolderId,
+      defaultFolderName: settings.defaultFolderName,
+      enableDateSubfolders: settings.enableDateSubfolders,
+      warnDuplicates: settings.warnDuplicates,
+      sourcePageUrl: info.pageUrl,
+      sourcePageTitle: tab?.title,
+      quote: info.selectionText || undefined,
+    });
 
-  // Duplicate Check
-  if (settings.warnDuplicates) {
-    const duplicate = await findDuplicateBookmark(targetUrl);
-    if (duplicate) {
-      if (settings.showNotifications) {
-        const addedDate = duplicate.dateAdded ? formatDisplayDate(duplicate.dateAdded) : 'previously';
+    if (settings.showNotifications) {
+      if (isDuplicate) {
+        const addedDate = node.dateAdded ? formatDisplayDate(node.dateAdded) : 'previously';
         browser.notifications.create({
           type: 'basic',
           iconUrl: 'assets/icon-48.png',
-          title: 'Already in BagMark!',
-          message: `"${duplicate.title}" was already saved on ${addedDate}.`,
+          title: 'Already in this folder!',
+          message: `"${node.title}" was already saved in ${folderTitle} on ${addedDate}.`,
+        });
+      } else {
+        browser.notifications.create({
+          type: 'basic',
+          iconUrl: 'assets/icon-48.png',
+          title: 'Bagged Successfully! 🎒',
+          message: `Saved "${targetTitle}" to ${folderTitle}`,
         });
       }
-      return;
-    }
-  }
-
-  try {
-    // Determine base folder
-    let baseFolderId: string;
-    let baseFolderTitle: string = settings.defaultFolderName;
-
-    if (info.menuItemId.toString().startsWith('bagmark_target_')) {
-      baseFolderId = info.menuItemId.toString().replace('bagmark_target_', '');
-      const folderNodes = await browser.bookmarks.get(baseFolderId);
-      baseFolderTitle = folderNodes[0]?.title || 'Folder';
-    } else {
-      const rootNode = await ensureRootFolder(settings.defaultFolderName);
-      baseFolderId = rootNode.id;
-      baseFolderTitle = rootNode.title;
-    }
-
-    // Determine destination folder (auto-date subfolder if enabled)
-    let destFolderId = baseFolderId;
-    let destFolderTitle = baseFolderTitle;
-
-    if (settings.enableDateSubfolders) {
-      const dateNode = await ensureDateSubfolder(baseFolderId, new Date());
-      destFolderId = dateNode.id;
-      destFolderTitle = `${baseFolderTitle} / ${dateNode.title}`;
-    }
-
-    // Create Bookmark
-    const newBookmark = await browser.bookmarks.create({
-      parentId: destFolderId,
-      title: targetTitle,
-      url: targetUrl,
-    });
-
-    // Store Rich Metadata
-    const metadata: BookmarkMetadata = {
-      id: newBookmark.id,
-      url: targetUrl,
-      title: targetTitle,
-      dateAdded: newBookmark.dateAdded || Date.now(),
-      folderId: destFolderId,
-      folderTitle: destFolderTitle,
-      sourcePageUrl,
-      sourcePageTitle,
-      quote,
-      tags: [],
-    };
-    await saveMetadata(metadata);
-
-    // Notification confirmation
-    if (settings.showNotifications) {
-      browser.notifications.create({
-        type: 'basic',
-        iconUrl: 'assets/icon-48.png',
-        title: 'Bagged Successfully! 🎒',
-        message: `Saved "${targetTitle}" to ${destFolderTitle}`,
-      });
     }
   } catch (error) {
     console.error('Failed to save bookmark:', error);
@@ -143,7 +98,7 @@ async function handleSaveAction(
         type: 'basic',
         iconUrl: 'assets/icon-48.png',
         title: 'BagMark Save Failed',
-        message: 'Could not save bookmark. Target folder may no longer exist.',
+        message: 'Could not save bookmark or metadata. Check the destination folder before retrying.',
       });
     }
   }
@@ -164,5 +119,5 @@ browser.storage.onChanged.addListener((changes, area) => {
 });
 
 browser.contextMenus.onClicked.addListener((info, tab) => {
-  handleSaveAction(info, tab);
+  return handleSaveAction(info, tab);
 });

@@ -2,15 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   ensureRootFolder,
   ensureDateSubfolder,
-  findDuplicateBookmark,
   getFolderHierarchy,
   saveBookmark,
+  saveBookmarks,
 } from '../src/lib/bookmarks';
 
 describe('bookmarks operations', () => {
   let nodes: any[] = [];
+  let metadata: Record<string, any> = {};
 
   beforeEach(() => {
+    metadata = {};
     nodes = [
       {
         id: 'root________',
@@ -26,7 +28,20 @@ describe('bookmarks operations', () => {
     ];
 
     (globalThis as any).browser = {
+      storage: { local: { set: vi.fn(async (values: any) => Object.assign(metadata, values)) } },
       bookmarks: {
+        get: vi.fn(async (id: string) => {
+          const find = (items: any[]): any => {
+            for (const item of items) {
+              if (item.id === id) return item;
+              const nested = item.children && find(item.children);
+              if (nested) return nested;
+            }
+          };
+          const node = find(nodes);
+          if (!node) throw new Error('Folder not found');
+          return [node];
+        }),
         getTree: vi.fn(async () => nodes),
         getChildren: vi.fn(async (id: string) => {
           const find = (arr: any[]): any => {
@@ -64,17 +79,6 @@ describe('bookmarks operations', () => {
           findAndAdd(nodes);
           return newNode;
         }),
-        search: vi.fn(async (query: any) => {
-          const matches: any[] = [];
-          const traverse = (arr: any[]) => {
-            for (const n of arr) {
-              if (query.url && n.url === query.url) matches.push(n);
-              if (n.children) traverse(n.children);
-            }
-          };
-          traverse(nodes);
-          return matches;
-        }),
       },
     };
   });
@@ -107,9 +111,9 @@ describe('bookmarks operations', () => {
       url: 'https://vite.dev/guide',
     });
 
-    const dup = await findDuplicateBookmark('https://vite.dev/guide?utm_source=docs');
-    expect(dup).not.toBeNull();
-    expect(dup?.title).toBe('Vite Guide');
+    const dup = await saveBookmark({ url: 'https://vite.dev/guide?utm_source=docs', title: 'Vite', targetFolderId: rootFolder.id });
+    expect(dup.isDuplicate).toBe(true);
+    expect(dup.node.title).toBe('Vite Guide');
   });
 
   it('retrieves folder hierarchy excluding root node', async () => {
@@ -184,9 +188,66 @@ describe('bookmarks operations', () => {
     expect(folder.parentId).toBe('toolbar_____');
   });
 
-  it('returns null when duplicate URL is not found', async () => {
-    const dup = await findDuplicateBookmark('https://nonexistent.org');
-    expect(dup).toBeNull();
+  it('saves into another folder even when the URL already exists elsewhere', async () => {
+    await saveBookmark({ url: 'https://example.com', title: 'First', defaultFolderName: 'First' });
+    const second = await saveBookmark({ url: 'https://example.com', title: 'Second', defaultFolderName: 'Second' });
+    expect(second.isDuplicate).toBe(false);
+    expect(second.node.title).toBe('Second');
+    expect(second.folderTitle).toBe('Second');
+  });
+
+  it('compares tracking variants on both sides without replacing existing metadata', async () => {
+    const first = await saveBookmark({ url: 'https://example.com?utm_source=first', title: 'Original', quote: 'Keep this quote' });
+    const original = { ...metadata[`bagmark_meta_${first.node.id}`] };
+    const second = await saveBookmark({ url: 'https://example.com?fbclid=second', title: 'Replacement', quote: 'Another quote' });
+    expect(second.isDuplicate).toBe(true);
+    expect(second.node.id).toBe(first.node.id);
+    expect(metadata[`bagmark_meta_${first.node.id}`]).toEqual(original);
+    expect(original.quote).toBe('Keep this quote');
+  });
+
+  it('checks the final date folder rather than the base folder', async () => {
+    const base = await saveBookmark({ url: 'https://example.com', title: 'Base' });
+    const dated = await saveBookmark({ url: 'https://example.com', title: 'Dated', enableDateSubfolders: true });
+    expect(dated.isDuplicate).toBe(false);
+    expect(dated.node.parentId).not.toBe(base.node.parentId);
+    expect((await saveBookmark({ url: 'https://example.com', title: 'Again', enableDateSubfolders: true })).node.id).toBe(dated.node.id);
+  });
+
+  it('allows duplicates when prevention is disabled', async () => {
+    const first = await saveBookmark({ url: 'https://example.com', title: 'First' });
+    const second = await saveBookmark({ url: 'https://example.com', title: 'Second', warnDuplicates: false });
+    expect(second.isDuplicate).toBe(false);
+    expect(second.node.id).not.toBe(first.node.id);
+  });
+
+  it('serializes simultaneous saves including default and date folder creation', async () => {
+    const [first, second] = await Promise.all([
+      saveBookmark({ url: 'https://example.com', title: 'First', enableDateSubfolders: true }),
+      saveBookmark({ url: 'https://example.com', title: 'Second', enableDateSubfolders: true }),
+    ]);
+    expect(first.isDuplicate).toBe(false);
+    expect(second.isDuplicate).toBe(true);
+    expect(second.node.id).toBe(first.node.id);
+    expect(nodes[0].children[0].children).toHaveLength(1);
+    expect(nodes[0].children[0].children[0].children).toHaveLength(1);
+  });
+
+  it('reads destination bookmarks once per batch and reports failures without stopping later saves', async () => {
+    const folder = await ensureRootFolder();
+    vi.mocked(browser.bookmarks.getChildren).mockClear();
+    vi.mocked(browser.bookmarks.create).mockRejectedValueOnce(new Error('Failed save'));
+    const results = await saveBookmarks([
+      { url: 'https://failed.example', title: 'Failed', targetFolderId: folder.id },
+      { url: 'https://example.com?utm_source=first', title: 'First', targetFolderId: folder.id },
+      { url: 'https://example.com?gclid=second', title: 'Second', targetFolderId: folder.id },
+    ]);
+    expect(results[0]).toMatchObject({ error: new Error('Failed save') });
+    expect(results[1]).toMatchObject({ isDuplicate: false });
+    expect(results[2]).toMatchObject({ isDuplicate: true });
+    expect(browser.bookmarks.getChildren).toHaveBeenCalledTimes(1);
+    expect(nodes[0].children[0].children[0].children).toHaveLength(1);
+    expect((await saveBookmark({ url: 'https://after.example', title: 'After', targetFolderId: folder.id })).isDuplicate).toBe(false);
   });
 
   it('uses Chromium Other Bookmarks regardless of its ID or language', async () => {
@@ -198,6 +259,31 @@ describe('bookmarks operations', () => {
     const folder = await ensureRootFolder();
     expect(folder.parentId).toBe('42');
     expect((await ensureRootFolder()).id).toBe(folder.id);
+  });
+
+  it('routes right-click saves through destination deduplication and metadata storage', async () => {
+    let click!: (info: any, tab?: any) => Promise<void>;
+    const settings = { enableDateSubfolders: false, showNotifications: false };
+    (browser.storage.local as any).get = vi.fn(async () => ({ bagmark_settings: settings }));
+    (browser.storage as any).onChanged = { addListener: vi.fn() };
+    (browser as any).runtime = { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } };
+    (browser as any).contextMenus = { onClicked: { addListener: (handler: typeof click) => { click = handler; } } };
+    vi.resetModules();
+    await import('../src/background/index');
+
+    const firstFolder = await ensureRootFolder('First');
+    const secondFolder = await ensureRootFolder('Second');
+    const info = { menuItemId: `bagmark_target_${firstFolder.id}`, pageUrl: 'https://example.com?utm_source=first', selectionText: 'Original quote' };
+    await click(info, { title: 'Page title' });
+    await click({ ...info, pageUrl: 'https://example.com?gclid=second', selectionText: 'Replacement quote' }, { title: 'New title' });
+    await click({ ...info, menuItemId: `bagmark_target_${secondFolder.id}` }, { title: 'Other collection' });
+
+    const firstChildren = await browser.bookmarks.getChildren(firstFolder.id);
+    const secondChildren = await browser.bookmarks.getChildren(secondFolder.id);
+    expect(firstChildren).toHaveLength(1);
+    expect(secondChildren).toHaveLength(1);
+    expect(metadata[`bagmark_meta_${firstChildren[0].id}`]).toMatchObject({ title: 'Page title', quote: 'Original quote', folderTitle: 'First' });
+    expect(metadata[`bagmark_meta_${secondChildren[0].id}`]).toMatchObject({ title: 'Other collection', folderTitle: 'Second' });
   });
 
   it('excludes Chromium root and managed folders from folder choices', async () => {

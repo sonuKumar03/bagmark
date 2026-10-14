@@ -12,7 +12,7 @@
 - **Context Submenus for Custom Folders**: Right-click submenu (`"Bag It to ▸"`) dynamically lists your favorite / pinned bookmark folders.
 - **Chronological Date Organization**: Optional auto-filing into year-month subfolders (e.g. `BagMark / 2026-09 / ...`), created on the fly.
 - **Rich Metadata Capture**: Automatically records exact timestamps (`dateAdded`), originating webpage URL/title, and any highlighted quote/text excerpt into local storage.
-- **Duplicate Link Detection**: Alerts you if a link has already been bookmarked, showing where and when it was saved.
+- **Duplicate Link Detection**: Skips links already saved in the destination folder while allowing the same link in other collections. Compares both URLs without known tracking parameters, preserving meaningful query parameters, fragments, and path differences. Disable this in Settings to allow repeated links in the same folder.
 - **Interactive Popup Dashboard**: Fast, search-as-you-type dashboard to filter bookmarks by title, URL, quote, or tags, with folder filters, relative time badges, and 1-click clipboard copy.
 - **Options & Customization**: Configure default folder name, toggle date-based subfolders, manage pinned submenu folders, and adjust alert notifications.
 - **Modern Stack**: Built with TypeScript, Vite, Vitest, and Manifest V3.
