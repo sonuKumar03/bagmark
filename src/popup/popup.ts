@@ -1,3 +1,4 @@
+import '../lib/browser';
 import { getAllMetadata, deleteMetadata } from '../lib/storage';
 import { BookmarkMetadata } from '../lib/types';
 import { formatRelativeTime } from '../lib/utils';

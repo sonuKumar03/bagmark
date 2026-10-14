@@ -1,5 +1,5 @@
 export interface BookmarkMetadata {
-  id: string;              // Firefox bookmark ID
+  id: string;              // Browser bookmark ID
   url: string;             // Destination URL
   title: string;           // Bookmark title
   dateAdded: number;       // Epoch milliseconds

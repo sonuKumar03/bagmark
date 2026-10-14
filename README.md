@@ -1,6 +1,6 @@
 # BagMark 🎒
 
-> An advanced, lightweight Firefox extension to quickly save bookmarks to customizable or date-organized folders with rich metadata and duplicate detection.
+> An advanced, lightweight extension for Firefox, Chrome, and Brave to quickly save bookmarks to customizable or date-organized folders with rich metadata and duplicate detection.
 
 ![BagMark Icon](public/assets/icon.svg)
 
@@ -15,7 +15,7 @@
 - **Duplicate Link Detection**: Alerts you if a link has already been bookmarked, showing where and when it was saved.
 - **Interactive Popup Dashboard**: Fast, search-as-you-type dashboard to filter bookmarks by title, URL, quote, or tags, with folder filters, relative time badges, and 1-click clipboard copy.
 - **Options & Customization**: Configure default folder name, toggle date-based subfolders, manage pinned submenu folders, and adjust alert notifications.
-- **Modern Stack**: Built with TypeScript, Vite, Vitest, and Firefox Manifest V3.
+- **Modern Stack**: Built with TypeScript, Vite, Vitest, and Manifest V3.
 
 ---
 
@@ -25,7 +25,7 @@
 
 - Node.js (v18+)
 - npm or pnpm
-- Mozilla Firefox (v115+)
+- Mozilla Firefox (v115+), Chrome (v123+), or Brave based on Chromium v123+
 
 ### Installation & Development
 
@@ -55,6 +55,21 @@
    - Click **"Load Temporary Add-on..."**.
    - Select `dist/manifest.json` from this project directory.
    - Right-click any link on the web to start bagging links!
+
+### Chrome & Brave
+
+Both browsers use the same Chromium build:
+
+```bash
+npm run build:chromium
+```
+
+1. Open `chrome://extensions` in Chrome or `brave://extensions` in Brave.
+2. Enable **Developer mode**.
+3. Click **Load unpacked** and select the project's `dist-chromium` folder.
+4. Pin BagMark to the toolbar, then right-click a webpage or link to save it.
+
+Firefox builds remain in `dist`; Chromium builds go to `dist-chromium` so rebuilding one does not remove the other. After rebuilding, click **Reload** on the extension's card. The existing packaging and signing commands produce Firefox artifacts; Chrome and Brave use the unpacked Chromium folder for local testing.
 
 ---
 
@@ -111,7 +126,7 @@ bagmark/
 │       ├── utils.ts           # Date formatters & URL normalizer
 │       ├── storage.ts         # Metadata local storage manager
 │       ├── config.ts          # Settings persistence
-│       └── bookmarks.ts       # Firefox bookmark tree traversal & creation
+│       └── bookmarks.ts       # Cross-browser bookmark tree traversal & creation
 └── tests/                     # Vitest automated test suite
 ```
 

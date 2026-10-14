@@ -10,18 +10,13 @@ export interface SaveBookmarkInput {
 
 export async function ensureRootFolder(name: string = 'BagMark'): Promise<browser.bookmarks.BookmarkTreeNode> {
   const tree = await browser.bookmarks.getTree();
-  // Find "unfiled" (Other Bookmarks) or fallback to root children
-  let parentId = 'unfiled_____';
-  if (tree[0]?.children) {
-    const other = tree[0].children.find(
-      (c) => c.id === 'unfiled_____' || c.title.toLowerCase().includes('other')
-    );
-    if (other) {
-      parentId = other.id;
-    } else if (tree[0].children[0]) {
-      parentId = tree[0].children[0].id;
-    }
-  }
+  const writable = tree[0]?.children?.filter((node) => !node.unmodifiable) || [];
+  const parent = writable.find((node) =>
+    node.id === 'unfiled_____' ||
+    (node as browser.bookmarks.BookmarkTreeNode & { folderType?: string }).folderType === 'other'
+  ) || writable[0];
+  if (!parent) throw new Error('No writable bookmark folder available');
+  const parentId = parent.id;
 
   // Look for existing folder with `name` under parentId
   const siblings = await browser.bookmarks.getChildren(parentId);
@@ -83,14 +78,10 @@ export async function getFolderHierarchy(): Promise<Array<{ id: string; title: s
 
   function traverse(nodes: browser.bookmarks.BookmarkTreeNode[], currentPath: string) {
     for (const node of nodes) {
-      if (!node.url) {
-        const title = node.title || (node.id === 'root________' ? '' : 'Folder');
-        const nextPath = node.id === 'root________'
-          ? ''
-          : (currentPath ? `${currentPath} / ${title}` : title);
-        if (node.id !== 'root________' && title) {
-          folders.push({ id: node.id, title, path: nextPath });
-        }
+      if (!node.url && !node.unmodifiable) {
+        const title = node.title || 'Folder';
+        const nextPath = currentPath ? `${currentPath} / ${title}` : title;
+        folders.push({ id: node.id, title, path: nextPath });
         if (node.children) {
           traverse(node.children, nextPath);
         }
@@ -98,7 +89,7 @@ export async function getFolderHierarchy(): Promise<Array<{ id: string; title: s
     }
   }
 
-  traverse(tree, '');
+  traverse(tree[0]?.children || [], '');
   return folders;
 }
 

@@ -1,3 +1,4 @@
+import '../lib/browser';
 import { ensureRootFolder, ensureDateSubfolder, findDuplicateBookmark } from '../lib/bookmarks';
 import { getSettings } from '../lib/config';
 import { saveMetadata } from '../lib/storage';
@@ -8,12 +9,12 @@ const QUICK_SAVE_ID = 'bagmark_quick_save';
 const SUBMENU_ROOT_ID = 'bagmark_submenu_root';
 
 async function updateContextMenus() {
-  await browser.menus.removeAll();
+  await browser.contextMenus.removeAll();
 
   const settings = await getSettings();
 
   // 1. Top-level 1-click Quick Save to default folder
-  browser.menus.create({
+  browser.contextMenus.create({
     id: QUICK_SAVE_ID,
     title: `Bag It (Save to ${settings.defaultFolderName})`,
     contexts: ['link', 'page', 'selection'],
@@ -21,7 +22,7 @@ async function updateContextMenus() {
 
   // 2. Submenu for custom / favorite folders
   if (settings.favoriteFolderIds && settings.favoriteFolderIds.length > 0) {
-    browser.menus.create({
+    browser.contextMenus.create({
       id: SUBMENU_ROOT_ID,
       title: 'Bag It to ▸',
       contexts: ['link', 'page', 'selection'],
@@ -31,7 +32,7 @@ async function updateContextMenus() {
       try {
         const nodes = await browser.bookmarks.get(folderId);
         if (nodes && nodes[0]) {
-          browser.menus.create({
+          browser.contextMenus.create({
             id: `bagmark_target_${folderId}`,
             parentId: SUBMENU_ROOT_ID,
             title: nodes[0].title,
@@ -46,7 +47,7 @@ async function updateContextMenus() {
 }
 
 async function handleSaveAction(
-  info: browser.menus.OnClickData,
+  info: browser.contextMenus.OnClickData,
   tab?: browser.tabs.Tab
 ) {
   if (info.menuItemId === SUBMENU_ROOT_ID) {
@@ -162,10 +163,6 @@ browser.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-browser.menus.onClicked.addListener((info, tab) => {
+browser.contextMenus.onClicked.addListener((info, tab) => {
   handleSaveAction(info, tab);
 });
-
-// Call immediately on background script execution
-updateContextMenus();
-

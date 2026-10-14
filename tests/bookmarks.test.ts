@@ -37,9 +37,9 @@ describe('bookmarks operations', () => {
                 if (sub) return sub;
               }
             }
-            return [];
+            return null;
           };
-          return find(nodes);
+          return find(nodes) || [];
         }),
         create: vi.fn(async (details: any) => {
           const newNode = {
@@ -187,5 +187,31 @@ describe('bookmarks operations', () => {
   it('returns null when duplicate URL is not found', async () => {
     const dup = await findDuplicateBookmark('https://nonexistent.org');
     expect(dup).toBeNull();
+  });
+
+  it('uses Chromium Other Bookmarks regardless of its ID or language', async () => {
+    nodes = [{ id: '0', title: '', children: [
+      { id: '1', title: 'Favoritenleiste', children: [] },
+      { id: '42', title: 'Weitere Lesezeichen', folderType: 'other', children: [] },
+    ] }];
+
+    const folder = await ensureRootFolder();
+    expect(folder.parentId).toBe('42');
+    expect((await ensureRootFolder()).id).toBe(folder.id);
+  });
+
+  it('excludes Chromium root and managed folders from folder choices', async () => {
+    nodes = [{ id: '0', title: '', children: [
+      { id: '1', title: 'Bookmarks bar', children: [] },
+      { id: '2', title: 'Other bookmarks', folderType: 'other', children: [] },
+      { id: '3', title: 'Company', unmodifiable: 'managed', children: [
+        { id: '4', title: 'Policies' },
+      ] },
+    ] }];
+
+    expect(await getFolderHierarchy()).toEqual([
+      { id: '1', title: 'Bookmarks bar', path: 'Bookmarks bar' },
+      { id: '2', title: 'Other bookmarks', path: 'Other bookmarks' },
+    ]);
   });
 });
